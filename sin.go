@@ -7,6 +7,7 @@ type (
 		Message() string
 		SetMessage(string)
 		Context() map[string]interface{}
+		SecretContext() string
 		SetContext(map[string]interface{})
 		Cause() error     // Get the nearest cause
 		SetCause(error)   // Set the nearest cause
@@ -16,11 +17,12 @@ type (
 
 	// baseSin base error
 	baseSin struct {
-		message   string
-		context   map[string]interface{}
-		causes    []error
-		cause     error
-		rootCause error
+		message       string
+		context       map[string]interface{}
+		secretContext string
+		causes        []error
+		cause         error
+		rootCause     error
 	}
 )
 
@@ -51,6 +53,16 @@ func (err *baseSin) Context() map[string]interface{} {
 
 func (err *baseSin) SetContext(context map[string]interface{}) {
 	err.context = context
+}
+
+func (err *baseSin) SecretContext() string {
+	return err.secretContext
+}
+
+// SetSecretContext set (unencrypted) context to secret-context
+func (err *baseSin) SetSecretContext(context string) {
+	// TODO encrypt context
+	err.secretContext = context
 }
 
 func (err *baseSin) Cause() error {
