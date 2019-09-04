@@ -1,5 +1,9 @@
 package gsin
 
+import (
+	"encoding/json"
+)
+
 type (
 	// Sin error
 	Sin interface {
@@ -7,8 +11,10 @@ type (
 		Message() string
 		SetMessage(string)
 		Context() map[string]interface{}
-		SecretContext() string
 		SetContext(map[string]interface{})
+		GetContext(key string) (interface{}, bool)
+		PutContext(key string, value interface{})
+		SecretContext() string
 		Cause() error     // Get the nearest cause
 		SetCause(error)   // Set the nearest cause
 		Causes() []error  // Get all causes, the last one is the root cause
@@ -55,14 +61,28 @@ func (err *baseSin) SetContext(context map[string]interface{}) {
 	err.context = context
 }
 
+func (err *baseSin) GetContext(key string) (interface{}, bool) {
+	if err.context == nil {
+		return nil, false
+	}
+	value, found := err.context[key]
+	return value, found
+}
+
+func (err *baseSin) PutContext(key string, value interface{}) {
+	if err.context == nil {
+		err.context = make(map[string]interface{})
+	}
+	err.context[key] = value
+}
+
 func (err *baseSin) SecretContext() string {
 	return err.secretContext
 }
 
-// SetSecretContext set (unencrypted) context to secret-context
-func (err *baseSin) SetSecretContext(context string) {
-	// TODO encrypt context
-	err.secretContext = context
+// SetSecretContext set (encrypted) context to secret-context
+func (err *baseSin) SetSecretContext(encryptedContext string) {
+	err.secretContext = encryptedContext
 }
 
 func (err *baseSin) Cause() error {
@@ -87,6 +107,16 @@ func (err *baseSin) Causes() []error {
 
 func (err *baseSin) RootCause() error {
 	return err.rootCause
+}
+
+func (err baseSin) MarshalJSON() ([]byte, error) {
+	properties := map[string]interface{}{
+		"error":          err.Message(),
+		"context":        err.Context(),
+		"secret_context": err.SecretContext(),
+		"causes":         err.Causes(),
+	}
+	return json.Marshal(properties)
 }
 
 // newCauses create error stack trace
